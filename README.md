@@ -12,7 +12,28 @@ An example of when this is useful is machine state change events. Here I want to
 - What was the state of the machine at the end of the time range
 
 ```
+start = from(bucket:"smart_factory/autogen")  
+|> range(start:-1y,stop:time(v: $__from*1000000))
+|> filter(fn: (r) => r._measurement == "Availability")
+|> filter(fn: (r) => r._field == "held")
+|> last()
+|> drop(columns:["_time"])
+|> duplicate(column: "_stop", as: "_time")
 
+end = from(bucket:"smart_factory/autogen")  
+|> range(start:-1y,stop:time(v: $__to*1000000))
+|> filter(fn: (r) => r._measurement == "Availability")
+|> filter(fn: (r) => r._field == "held")
+|> last()
+|> drop(columns:["_time"])
+|> duplicate(column: "_stop", as: "_time")
+
+data = from(bucket:"smart_factory/autogen")  
+|> range($range)
+|> filter(fn: (r) => r._measurement == "Availability")
+|> filter(fn: (r) => r._field == "held")
+
+ union(tables: [start, data, end])
 ```
 
 
