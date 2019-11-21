@@ -43,5 +43,20 @@ Often, we need to see and aggregate the duration in of a machine state event. Th
 
 
 ```
+elapsed=from(bucket:"smart_factory/autogen")  
+|> range($range)
+|> filter(fn: (r) => r._measurement == "Availability")
+|> filter(fn: (r) => r._field == "execute")
+|> elapsed(unit:1ns,timeColumn:"_time",columnName:"elapsed")
+|> map(fn: (r) =>  ({r with rounded: math.round(x: float(v: r.elapsed)/float(v:1000000))}))
+|> map(fn: (r) => ({r with event_start: int(v: int(v: r._time) - (int(v : r.rounded)*1000000))}))
+|> map(fn: (r) => ({r with event_end: int(v: int(v: r._time) )}))
 
+avail=from(bucket:"smart_factory/autogen")  
+|> range($range)
+|> filter(fn: (r) => r._measurement == "Availability")
+|> filter(fn: (r) => r._field == "execute")
+|> map(fn: (r) => ({r with event_start: int(v: int(v: r._time) )}))
+
+join(    tables:{avail:avail,elapsed:elapsed},    on:["Site","Area","Line","event_start"])
 ```
